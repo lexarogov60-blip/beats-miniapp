@@ -1,76 +1,509 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<title>Beats</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Beat Store</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
 
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
+    body {
+      background: var(--bg-color, #0b0b0f);
+      color: var(--text-color, #ffffff);
+      padding: 20px 16px 40px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      transition: background 0.3s, color 0.3s;
+    }
 
-<style>
+    /* Переменные для светлой/тёмной темы */
+    body.light {
+      --bg-color: #f5f5f7;
+      --text-color: #1a1a1e;
+      --card-bg: #ffffff;
+      --border-color: #e0e0e0;
+      --secondary-text: #555;
+      --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
 
-body{
-background:#111;
-color:white;
-font-family:Arial;
-padding:20px;
-}
+    body.dark {
+      --bg-color: #0b0b0f;
+      --text-color: #ffffff;
+      --card-bg: #14141e;
+      --border-color: #1e1e2a;
+      --secondary-text: #aaa;
+      --shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
 
-.beat{
+    /* Шапка */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
 
-background:#222;
-padding:15px;
-margin:15px 0;
-border-radius:10px;
+    .header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #a855f7, #6b21a5);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
 
-}
+    .header span {
+      font-size: 14px;
+      color: var(--secondary-text);
+      background: var(--card-bg);
+      padding: 4px 12px;
+      border-radius: 30px;
+      font-weight: 500;
+      border: 1px solid var(--border-color);
+    }
 
-.free{
-color:#3cff54;
-font-weight:bold;
-}
+    /* Приветствие */
+    .greeting {
+      margin-bottom: 24px;
+    }
 
-.sold{
-color:red;
-font-weight:bold;
-}
+    .greeting h2 {
+      font-size: 22px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
 
-</style>
+    .greeting p {
+      color: var(--secondary-text);
+      font-size: 14px;
+    }
 
+    /* Фильтры по статусу */
+    .filters {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .filters button {
+      background: var(--card-bg);
+      color: var(--secondary-text);
+      border: 1px solid var(--border-color);
+      padding: 8px 18px;
+      border-radius: 30px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: 0.2s;
+      box-shadow: var(--shadow);
+    }
+
+    .filters button.active {
+      background: #a855f7;
+      color: #fff;
+      border-color: #a855f7;
+    }
+
+    .filters button:active {
+      transform: scale(0.95);
+    }
+
+    /* Список битов */
+    .beat-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      flex: 1;
+    }
+
+    .beat-card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 16px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow);
+      transition: 0.2s;
+    }
+
+    .beat-left {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+    }
+
+    .beat-name {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .beat-details {
+      font-size: 14px;
+      color: var(--secondary-text);
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .beat-details span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .beat-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      margin-top: 4px;
+    }
+
+    .status-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .status-dot.free { background: #22c55e; }
+    .status-dot.booked { background: #eab308; }
+    .status-dot.bought { background: #ef4444; }
+
+    .beat-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+    }
+
+    .beat-price {
+      font-size: 20px;
+      font-weight: 700;
+      color: #a855f7;
+    }
+
+    .beat-price.bought {
+      text-decoration: line-through;
+      color: var(--secondary-text);
+    }
+
+    .action-btn {
+      background: #a855f7;
+      color: #fff;
+      border: none;
+      border-radius: 30px;
+      padding: 6px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.2s;
+      box-shadow: 0 2px 8px rgba(168, 85, 247, 0.3);
+    }
+
+    .action-btn:active {
+      transform: scale(0.94);
+    }
+
+    .action-btn.bought-btn {
+      background: #ef4444;
+    }
+
+    .action-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+
+    /* Уведомление (snackbar) */
+    .snackbar {
+      position: fixed;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #333;
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 30px;
+      font-size: 14px;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+      z-index: 200;
+      white-space: nowrap;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    }
+
+    .snackbar.show {
+      opacity: 1;
+    }
+
+    /* Баннер для не-владельца */
+    .readonly-banner {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 12px 16px;
+      margin-bottom: 20px;
+      text-align: center;
+      font-size: 14px;
+      color: var(--secondary-text);
+      box-shadow: var(--shadow);
+    }
+
+    @media (max-width: 400px) {
+      .header h1 { font-size: 24px; }
+      .beat-price { font-size: 18px; }
+      .beat-card { flex-wrap: wrap; }
+      .beat-right { align-items: flex-start; margin-top: 8px; width: 100%; flex-direction: row; justify-content: space-between; }
+    }
+  </style>
 </head>
-
 <body>
 
-<h1>🎵 Мои биты</h1>
+  <!-- Шапка -->
+  <div class="header">
+    <h1>Beat Store</h1>
+    <span>mini app</span>
+  </div>
 
-<div class="beat">
+  <!-- Приветствие -->
+  <div class="greeting">
+    <h2>Premium Beats.</h2>
+    <p>Качественные биты для твоих треков.</p>
+  </div>
 
-<h2>Trap Beat #001</h2>
+  <!-- Баннер для не-владельца (будет показан, если пользователь не владелец) -->
+  <div id="readonlyBanner" class="readonly-banner" style="display:none;">
+    ⚡ Вы просматриваете каталог. Только владелец может менять статусы битов.
+  </div>
 
-<p class="free">
-🟢 Свободен
-</p>
+  <!-- Фильтры по статусу -->
+  <div class="filters" id="filterButtons">
+    <button class="active" data-filter="all">Все</button>
+    <button data-filter="free">Свободно</button>
+    <button data-filter="booked">Забронировано</button>
+    <button data-filter="bought">Куплено</button>
+  </div>
 
-</div>
+  <!-- Список битов -->
+  <div class="beat-list" id="beatList"></div>
 
-<div class="beat">
+  <!-- Уведомление -->
+  <div id="snackbar" class="snackbar"></div>
 
-<h2>Drill Beat #002</h2>
+  <script>
+    // ============================================================
+    // 1. УКАЖИТЕ СВОЙ TELEGRAM ID (владелец)
+    //    Как узнать: напишите боту @userinfobot, он покажет ваш ID.
+    // ============================================================
+    const OWNER_ID = 123456789;  // ← ЗАМЕНИТЕ НА СВОЙ ID
 
-<p class="sold">
-🔴 Продан
-</p>
+    // ===== ДАННЫЕ =====
+    let beats = [
+      { id: 1, name: 'Midnight', bpm: 140, key: 'D Minor', price: 29.99, status: 'free' },
+      { id: 2, name: 'Purple Vibes', bpm: 120, key: 'A Minor', price: 29.99, status: 'booked' },
+      { id: 3, name: 'No Limits', bpm: 150, key: 'C# Minor', price: 29.99, status: 'free' },
+      { id: 4, name: 'Late Nights', bpm: 130, key: 'G Minor', price: 29.99, status: 'bought' },
+    ];
 
-</div>
+    // ===== ЭЛЕМЕНТЫ =====
+    const beatList = document.getElementById('beatList');
+    const snackbar = document.getElementById('snackbar');
+    const filterButtons = document.querySelectorAll('#filterButtons button');
+    const readonlyBanner = document.getElementById('readonlyBanner');
 
-<div class="beat">
+    // ===== ТЕКУЩИЙ ПОЛЬЗОВАТЕЛЬ =====
+    let currentUser = null;
+    let isOwner = false;
 
-<h2>Guitar Beat #003</h2>
+    // ===== ПОЛУЧАЕМ ДАННЫЕ ПОЛЬЗОВАТЕЛЯ ИЗ TELEGRAM =====
+    if (window.Telegram && Telegram.WebApp) {
+      const webapp = Telegram.WebApp;
+      webapp.ready();
+      webapp.expand();
 
-<p class="free">
-🟢 Свободен
-</p>
+      // Получаем данные пользователя
+      if (webapp.initDataUnsafe && webapp.initDataUnsafe.user) {
+        currentUser = webapp.initDataUnsafe.user;
+        isOwner = (currentUser.id === OWNER_ID);
+      }
 
-</div>
+      // Подстраиваем тему
+      const colorScheme = webapp.colorScheme;
+      document.body.classList.add(colorScheme);
+      webapp.onEvent('themeChanged', () => {
+        document.body.classList.remove('light', 'dark');
+        document.body.classList.add(webapp.colorScheme);
+      });
+    } else {
+      // Запуск вне Telegram – для теста можно ввести ID вручную
+      // Для теста: если нет Telegram, считаем, что пользователь – владелец (для удобства разработки)
+      isOwner = true;
+      // Можно также предложить ввести ID через prompt для теста, но для простоты оставим как владельца
+      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+      } else {
+        document.body.classList.add('light');
+      }
+    }
+
+    // ===== ПОКАЗЫВАЕМ БАННЕР, ЕСЛИ НЕ ВЛАДЕЛЕЦ =====
+    if (!isOwner) {
+      readonlyBanner.style.display = 'block';
+    }
+
+    // ===== ТЕКУЩИЙ ФИЛЬТР =====
+    let currentFilter = 'all';
+
+    // ===== ФУНКЦИЯ ПОКАЗА УВЕДОМЛЕНИЯ =====
+    let snackbarTimer;
+
+    function showSnackbar(text) {
+      snackbar.textContent = text;
+      snackbar.classList.add('show');
+      clearTimeout(snackbarTimer);
+      snackbarTimer = setTimeout(() => {
+        snackbar.classList.remove('show');
+      }, 2500);
+    }
+
+    // ===== РЕНДЕР СПИСКА =====
+    function renderBeats() {
+      // Фильтруем
+      let filtered = beats;
+      if (currentFilter !== 'all') {
+        filtered = beats.filter(b => b.status === currentFilter);
+      }
+
+      if (filtered.length === 0) {
+        beatList.innerHTML = `<div style="text-align:center;color:var(--secondary-text);padding:40px 0;">Нет битов с таким статусом</div>`;
+        return;
+      }
+
+      beatList.innerHTML = '';
+      filtered.forEach(beat => {
+        const card = document.createElement('div');
+        card.className = 'beat-card';
+
+        // Текст статуса
+        const statusText = {
+          free: 'Свободно',
+          booked: 'Забронировано',
+          bought: 'Куплено'
+        }[beat.status];
+
+        // Кнопка действия – доступна только владельцу
+        const isOwnerAction = isOwner;
+        let actionText, actionClass = '';
+        if (beat.status === 'free') {
+          actionText = 'Забронировать';
+        } else if (beat.status === 'booked') {
+          actionText = 'Купить';
+        } else { // bought
+          actionText = 'Освободить';
+          actionClass = 'bought-btn';
+        }
+
+        const priceClass = beat.status === 'bought' ? 'beat-price bought' : 'beat-price';
+
+        card.innerHTML = `
+          <div class="beat-left">
+            <div class="beat-name">${beat.name}</div>
+            <div class="beat-details">
+              <span>🎵 ${beat.bpm} BPM</span>
+              <span>🎵 ${beat.key}</span>
+            </div>
+            <div class="beat-status">
+              <span class="status-dot ${beat.status}"></span>
+              <span>${statusText}</span>
+            </div>
+          </div>
+          <div class="beat-right">
+            <div class="${priceClass}">$${beat.price.toFixed(2)}</div>
+            ${isOwnerAction ? `<button class="action-btn ${actionClass}" data-id="${beat.id}">${actionText}</button>` : ''}
+          </div>
+        `;
+
+        // Клик по карточке – просмотр (без изменений)
+        card.addEventListener('click', (e) => {
+          if (e.target.tagName === 'BUTTON') return;
+          showSnackbar(`Бит "${beat.name}" – ${statusText}`);
+        });
+
+        // Обработчик кнопки (только если владелец)
+        if (isOwnerAction) {
+          const btn = card.querySelector('.action-btn');
+          if (btn) {
+            btn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              changeStatus(beat.id);
+            });
+          }
+        }
+
+        beatList.appendChild(card);
+      });
+    }
+
+    // ===== ИЗМЕНЕНИЕ СТАТУСА (только для владельца) =====
+    function changeStatus(id) {
+      if (!isOwner) {
+        showSnackbar('У вас нет прав для изменения статусов.');
+        return;
+      }
+      const beat = beats.find(b => b.id === id);
+      if (!beat) return;
+
+      let newStatus;
+      let message;
+      if (beat.status === 'free') {
+        newStatus = 'booked';
+        message = `Бит "${beat.name}" забронирован!`;
+      } else if (beat.status === 'booked') {
+        newStatus = 'bought';
+        message = `Бит "${beat.name}" куплен!`;
+      } else { // bought
+        newStatus = 'free';
+        message = `Бит "${beat.name}" освобождён.`;
+      }
+
+      beat.status = newStatus;
+      showSnackbar(message);
+      renderBeats();
+    }
+
+    // ===== ФИЛЬТРЫ =====
+    filterButtons.forEach(btn => {
+      btn.addEventListener('click', function() {
+        filterButtons.forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        currentFilter = this.dataset.filter;
+        renderBeats();
+      });
+    });
+
+    // ===== ИНИЦИАЛИЗАЦИЯ =====
+    renderBeats();
+
+    // Выводим в консоль ID пользователя для отладки (можно убрать)
+    if (currentUser) {
+      console.log('Ваш Telegram ID:', currentUser.id);
+      console.log('Вы владелец?', isOwner);
+    }
+  </script>
 
 </body>
 </html>
